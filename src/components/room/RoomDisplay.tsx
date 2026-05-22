@@ -209,6 +209,39 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
           <p className="text-white/50 text-lg">اضغط للعودة</p>
         </div>
       )}
+      {/* Confirmation bar - fixed top */}
+      {eventsLoaded && current && currentEventConfirmed !== true && confirmMinutesLeft > 0 && (
+        <div className="bg-orange-500 px-8 py-4 flex items-center justify-between gap-4 animate-pulse-slow">
+          <div className="flex items-center gap-4 flex-1">
+            <div className="w-3 h-3 rounded-full bg-white animate-ping shrink-0" />
+            <div>
+              <p className="text-white font-bold text-xl">يرجى تأكيد حضورك في القاعة</p>
+              <p className="text-white/80 text-sm">سيُلغى الحجز تلقائياً خلال {confirmMinutesLeft} دقيقة إذا لم يتم التأكيد</p>
+            </div>
+            <div className="mr-2 bg-white/20 rounded-xl px-4 py-2 text-center shrink-0">
+              <p className="text-white/70 text-xs">الوقت المتبقي</p>
+              <p className="text-white text-2xl font-bold tabular-nums">{confirmMinutesLeft}:00</p>
+            </div>
+          </div>
+          <button
+            onClick={handleConfirm}
+            disabled={isConfirming}
+            className="bg-white text-orange-600 font-bold px-8 py-4 rounded-2xl text-xl hover:bg-orange-50 active:bg-orange-100 disabled:opacity-60 transition-colors shrink-0 shadow-lg"
+          >
+            {isConfirming ? '...' : '✓ تأكيد الحضور'}
+          </button>
+        </div>
+      )}
+
+      {eventsLoaded && current && currentEventConfirmed === true && (
+        <div className="bg-green-600 px-8 py-3 flex items-center gap-3">
+          <svg className="w-6 h-6 text-white shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          <p className="text-white font-semibold text-lg">تم تأكيد الحضور ✓</p>
+        </div>
+      )}
+
       {/* Top bar: Room name + status */}
       <div className="flex items-center justify-between px-8 pt-8 pb-4">
         <div className="flex items-center gap-4">
@@ -283,41 +316,6 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
                 </div>
               )}
 
-              {/* Confirmation banner */}
-              {eventsLoaded && currentEventConfirmed !== true && confirmMinutesLeft > 0 && (
-                <div className="mt-6 bg-orange-500/20 border border-orange-400/40 rounded-2xl p-5">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="text-orange-300 font-bold text-lg">يرجى تأكيد الحضور</p>
-                      <p className="text-orange-200/70 text-sm mt-1">
-                        سيُلغى الحجز تلقائياً خلال {confirmMinutesLeft} دقيقة
-                      </p>
-                    </div>
-                    <button
-                      onClick={handleConfirm}
-                      disabled={isConfirming}
-                      className="bg-orange-500 hover:bg-orange-400 active:bg-orange-600 disabled:opacity-60 text-white font-bold px-6 py-3 rounded-xl text-lg transition-colors shrink-0"
-                    >
-                      {isConfirming ? '...' : 'تأكيد الحضور'}
-                    </button>
-                  </div>
-                  <div className="mt-3 bg-white/10 rounded-full h-2 overflow-hidden">
-                    <div
-                      className="bg-orange-400 h-2 rounded-full transition-all duration-1000"
-                      style={{ width: `${(confirmMinutesLeft / 30) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {currentEventConfirmed === true && (
-                <div className="mt-6 bg-green-500/20 border border-green-400/40 rounded-2xl p-4 flex items-center gap-3">
-                  <svg className="w-6 h-6 text-green-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <p className="text-green-300 font-semibold">تم تأكيد الحضور</p>
-                </div>
-              )}
             </div>
           ) : (
             <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-8 border border-white/10 flex-1 flex flex-col items-center justify-center text-center">
