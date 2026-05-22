@@ -284,7 +284,7 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
               )}
 
               {/* Confirmation banner */}
-              {currentEventConfirmed === false && (
+              {currentEventConfirmed === false && confirmMinutesLeft > 0 && (
                 <div className="mt-6 bg-orange-500/20 border border-orange-400/40 rounded-2xl p-5">
                   <div className="flex items-center justify-between gap-4">
                     <div>

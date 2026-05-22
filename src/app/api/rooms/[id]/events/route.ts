@@ -23,7 +23,9 @@ export async function GET(_req: Request, { params }: Params) {
 
     if (currentEvent) {
       await registerEvent(currentEvent.id, room.id, currentEvent.startTime)
-      currentEventConfirmed = await isEventConfirmed(currentEvent.id)
+      const confirmed = await isEventConfirmed(currentEvent.id)
+      // null means unknown → treat as unconfirmed (false)
+      currentEventConfirmed = confirmed ?? false
     }
 
     // Cleanup: auto-delete unconfirmed meetings past 30 minutes
