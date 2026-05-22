@@ -29,32 +29,52 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
   const [showBooking, setShowBooking] = useState(false)
   const [lastSync, setLastSync] = useState(new Date())
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [showReturnOverlay, setShowReturnOverlay] = useState(false)
   const tz = getTimezone()
 
-  // Auto-enter fullscreen on tablet
+  // Kiosk mode: fullscreen + prevent exit
   useEffect(() => {
     const enterFullscreen = async () => {
       try {
         if (document.documentElement.requestFullscreen) {
           await document.documentElement.requestFullscreen()
-          setIsFullscreen(true)
         }
-      } catch { /* user denied fullscreen */ }
+      } catch { /* user denied */ }
     }
 
-    // Enter fullscreen on first user interaction (required by browsers)
+    // Enter fullscreen on first touch (browser requires user gesture)
     const handleFirstTouch = () => {
       enterFullscreen()
       document.removeEventListener('click', handleFirstTouch)
       document.removeEventListener('touchstart', handleFirstTouch)
     }
-
     document.addEventListener('click', handleFirstTouch)
     document.addEventListener('touchstart', handleFirstTouch)
 
-    // Track fullscreen state
-    const onFSChange = () => setIsFullscreen(!!document.fullscreenElement)
+    // When user exits fullscreen (e.g. presses Escape), show overlay
+    const onFSChange = () => {
+      const inFS = !!document.fullscreenElement
+      setIsFullscreen(inFS)
+      if (!inFS) setShowReturnOverlay(true)
+      else setShowReturnOverlay(false)
+    }
     document.addEventListener('fullscreenchange', onFSChange)
+
+    // Prevent right-click context menu
+    const preventContext = (e: MouseEvent) => e.preventDefault()
+    document.addEventListener('contextmenu', preventContext)
+
+    // Block common exit keyboard shortcuts
+    const blockKeys = (e: KeyboardEvent) => {
+      if (
+        e.key === 'F11' ||
+        (e.altKey && e.key === 'F4') ||
+        (e.ctrlKey && (e.key === 'w' || e.key === 'W' || e.key === 'r' || e.key === 'R'))
+      ) {
+        e.preventDefault()
+      }
+    }
+    document.addEventListener('keydown', blockKeys)
 
     // Prevent back navigation
     history.pushState(null, '', window.location.href)
@@ -66,6 +86,8 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
       document.removeEventListener('click', handleFirstTouch)
       document.removeEventListener('touchstart', handleFirstTouch)
       document.removeEventListener('fullscreenchange', onFSChange)
+      document.removeEventListener('contextmenu', preventContext)
+      document.removeEventListener('keydown', blockKeys)
     }
   }, [])
 
@@ -141,7 +163,27 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
   const sc = statusConfig[status]
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br ${sc.gradientFrom} ${sc.gradientVia} to-slate-900 flex flex-col tablet-display`}>
+    <div className={`min-h-screen bg-gradient-to-br ${sc.gradientFrom} ${sc.gradientVia} to-slate-900 flex flex-col tablet-display select-none`}>
+      {/* Kiosk overlay: shown when user exits fullscreen */}
+      {showReturnOverlay && (
+        <div
+          className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center cursor-pointer"
+          onClick={async () => {
+            try {
+              await document.documentElement.requestFullscreen()
+              setShowReturnOverlay(false)
+            } catch { /* denied */ }
+          }}
+        >
+          <div className="w-24 h-24 bg-white/10 rounded-full flex items-center justify-center mb-6">
+            <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+            </svg>
+          </div>
+          <p className="text-white text-3xl font-bold mb-2">{room.name}</p>
+          <p className="text-white/50 text-lg">اضغط للعودة</p>
+        </div>
+      )}
       {/* Top bar: Room name + status */}
       <div className="flex items-center justify-between px-8 pt-8 pb-4">
         <div className="flex items-center gap-4">
@@ -274,27 +316,19 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
               <span>{room.capacity} شخص</span>
               <span>{room.amenities.slice(0, 2).join(' · ')}</span>
               <span>مزامنة {format(toZonedTime(lastSync, tz), 'hh:mm')}</span>
-              <button
-                onClick={async () => {
-                  if (!document.fullscreenElement) {
-                    await document.documentElement.requestFullscreen()
-                  } else {
-                    await document.exitFullscreen()
-                  }
-                }}
-                className="text-white/40 hover:text-white/70 transition-colors"
-                title="شاشة كاملة"
-              >
-                {isFullscreen ? (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
-                  </svg>
-                ) : (
+              {!isFullscreen && (
+                <button
+                  onClick={async () => {
+                    try { await document.documentElement.requestFullscreen() } catch { /* denied */ }
+                  }}
+                  className="text-white/40 hover:text-white/70 transition-colors"
+                  title="شاشة كاملة"
+                >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
                   </svg>
-                )}
-              </button>
+                </button>
+              )}
             </div>
           </div>
         </div>
