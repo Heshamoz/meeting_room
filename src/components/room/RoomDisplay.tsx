@@ -30,9 +30,8 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
   const [lastSync, setLastSync] = useState(new Date())
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showReturnOverlay, setShowReturnOverlay] = useState(false)
-  const [currentEventConfirmed, setCurrentEventConfirmed] = useState<boolean | null>(null)
+  const [currentEventConfirmed, setCurrentEventConfirmed] = useState<boolean>(false)
   const [isConfirming, setIsConfirming] = useState(false)
-  const [eventsLoaded, setEventsLoaded] = useState(false)
   const tz = getTimezone()
 
   // Kiosk mode: fullscreen + prevent exit
@@ -108,8 +107,9 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
         const data = await res.json()
         setEvents(data.events || [])
         setLastSync(new Date())
-        setCurrentEventConfirmed(data.currentEventConfirmed ?? false)
-        setEventsLoaded(true)
+        if (typeof data.currentEventConfirmed === 'boolean') {
+          setCurrentEventConfirmed(data.currentEventConfirmed)
+        }
       }
     } catch {
       // keep existing events
@@ -210,7 +210,7 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
         </div>
       )}
       {/* Confirmation bar - fixed top */}
-      {eventsLoaded && current && currentEventConfirmed !== true && confirmMinutesLeft > 0 && (
+      {current && !currentEventConfirmed && confirmMinutesLeft > 0 && (
         <div className="bg-orange-500 px-8 py-4 flex items-center justify-between gap-4 animate-pulse-slow">
           <div className="flex items-center gap-4 flex-1">
             <div className="w-3 h-3 rounded-full bg-white animate-ping shrink-0" />
@@ -233,7 +233,7 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
         </div>
       )}
 
-      {eventsLoaded && current && currentEventConfirmed === true && (
+      {current && currentEventConfirmed && (
         <div className="bg-green-600 px-8 py-3 flex items-center gap-3">
           <svg className="w-6 h-6 text-white shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
