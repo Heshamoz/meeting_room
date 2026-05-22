@@ -4,10 +4,12 @@ import { signOut } from 'next-auth/react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import type { User } from 'next-auth'
-
 interface Props {
-  user?: User
+  user?: {
+    name?: string | null
+    email?: string | null
+    image?: string | null
+  }
 }
 
 const navLinks = [
