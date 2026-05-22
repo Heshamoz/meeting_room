@@ -1,17 +1,11 @@
-/**
- * Upstash Redis wrapper for room storage.
- * Works on Netlify, Vercel, and any serverless platform.
- * Falls back to in-memory store for local dev without Redis configured.
- */
-
+import { Redis } from '@upstash/redis'
 import type { Room } from '@/types'
 
-// In-memory fallback for local dev (rooms reset on restart)
+// In-memory fallback for local dev without Redis
 const memStore = new Map<string, string>()
 
-async function getRedis() {
+function getRedis(): Redis | null {
   if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-    const { Redis } = await import('@upstash/redis')
     return new Redis({
       url: process.env.UPSTASH_REDIS_REST_URL,
       token: process.env.UPSTASH_REDIS_REST_TOKEN,
@@ -21,19 +15,28 @@ async function getRedis() {
 }
 
 async function kvGet(key: string): Promise<string | null> {
-  const redis = await getRedis()
+  const redis = getRedis()
   if (redis) {
-    const val = await redis.get<string>(key)
-    return val ?? null
+    try {
+      const val = await redis.get<string>(key)
+      return val ?? null
+    } catch (e) {
+      console.error('Redis GET error:', e)
+      return null
+    }
   }
   return memStore.get(key) ?? null
 }
 
 async function kvSet(key: string, value: string): Promise<void> {
-  const redis = await getRedis()
+  const redis = getRedis()
   if (redis) {
-    await redis.set(key, value)
-    return
+    try {
+      await redis.set(key, value)
+      return
+    } catch (e) {
+      console.error('Redis SET error:', e)
+    }
   }
   memStore.set(key, value)
 }
@@ -46,7 +49,8 @@ export async function getAllRooms(): Promise<Room[]> {
   const data = await kvGet(ROOMS_KEY)
   if (!data) return []
   try {
-    return JSON.parse(data) as Room[]
+    const parsed = typeof data === 'string' ? JSON.parse(data) : data
+    return Array.isArray(parsed) ? parsed : []
   } catch {
     return []
   }
