@@ -1,29 +1,23 @@
+import { getStore } from '@netlify/blobs'
 import type { Room } from '@/types'
 
-// In-memory fallback for local dev
-const memStore = new Map<string, Room[]>()
-const ROOMS_KEY = 'rooms'
 const STORE_NAME = 'meeting-rooms'
+const ROOMS_KEY = 'rooms'
 
-async function getStore() {
-  if (process.env.NETLIFY || process.env.NETLIFY_LOCAL) {
-    const { getStore } = await import('@netlify/blobs')
-    return getStore({ name: STORE_NAME, consistency: 'strong' })
-  }
-  return null
+// In-memory fallback for local dev
+const memStore: Room[] = []
+
+function store() {
+  return getStore({ name: STORE_NAME, consistency: 'strong' })
 }
 
 export async function getAllRooms(): Promise<Room[]> {
   try {
-    const store = await getStore()
-    if (store) {
-      const data = await store.get(ROOMS_KEY, { type: 'json' })
-      return Array.isArray(data) ? data : []
-    }
-  } catch (e) {
-    console.error('getAllRooms error:', e)
+    const data = await store().get(ROOMS_KEY, { type: 'json' })
+    return Array.isArray(data) ? (data as Room[]) : []
+  } catch {
+    return [...memStore]
   }
-  return memStore.get(ROOMS_KEY) ?? []
 }
 
 export async function getRoomById(id: string): Promise<Room | null> {
@@ -32,38 +26,25 @@ export async function getRoomById(id: string): Promise<Room | null> {
 }
 
 export async function saveRoom(room: Room): Promise<void> {
-  const rooms = await getAllRooms()
-  const idx = rooms.findIndex((r) => r.id === room.id)
-  if (idx >= 0) {
-    rooms[idx] = room
-  } else {
-    rooms.push(room)
-  }
-
   try {
-    const store = await getStore()
-    if (store) {
-      await store.setJSON(ROOMS_KEY, rooms)
-      return
-    }
-  } catch (e) {
-    console.error('saveRoom error:', e)
+    const rooms = await getAllRooms()
+    const idx = rooms.findIndex((r) => r.id === room.id)
+    if (idx >= 0) rooms[idx] = room
+    else rooms.push(room)
+    await store().setJSON(ROOMS_KEY, rooms)
+  } catch {
+    const idx = memStore.findIndex((r) => r.id === room.id)
+    if (idx >= 0) memStore[idx] = room
+    else memStore.push(room)
   }
-  memStore.set(ROOMS_KEY, rooms)
 }
 
 export async function deleteRoom(id: string): Promise<void> {
-  const rooms = await getAllRooms()
-  const filtered = rooms.filter((r) => r.id !== id)
-
   try {
-    const store = await getStore()
-    if (store) {
-      await store.setJSON(ROOMS_KEY, filtered)
-      return
-    }
-  } catch (e) {
-    console.error('deleteRoom error:', e)
+    const rooms = await getAllRooms()
+    await store().setJSON(ROOMS_KEY, rooms.filter((r) => r.id !== id))
+  } catch {
+    const idx = memStore.findIndex((r) => r.id === id)
+    if (idx >= 0) memStore.splice(idx, 1)
   }
-  memStore.set(ROOMS_KEY, filtered)
 }
