@@ -209,36 +209,31 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
           <p className="text-white/50 text-lg">اضغط للعودة</p>
         </div>
       )}
-      {/* Confirmation bar - fixed top */}
+      {/* Confirmation full-screen modal */}
       {current && !currentEventConfirmed && confirmMinutesLeft > 0 && (
-        <div className="bg-orange-500 px-8 py-4 flex items-center justify-between gap-4 animate-pulse-slow">
-          <div className="flex items-center gap-4 flex-1">
-            <div className="w-3 h-3 rounded-full bg-white animate-ping shrink-0" />
-            <div>
-              <p className="text-white font-bold text-xl">يرجى تأكيد حضورك في القاعة</p>
-              <p className="text-white/80 text-sm">سيُلغى الحجز تلقائياً خلال {confirmMinutesLeft} دقيقة إذا لم يتم التأكيد</p>
-            </div>
-            <div className="mr-2 bg-white/20 rounded-xl px-4 py-2 text-center shrink-0">
-              <p className="text-white/70 text-xs">الوقت المتبقي</p>
-              <p className="text-white text-2xl font-bold tabular-nums">{confirmMinutesLeft}:00</p>
-            </div>
+        <div style={{position:'fixed',inset:0,zIndex:9999,background:'#ea580c',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'32px'}}>
+          <div style={{width:'80px',height:'80px',borderRadius:'50%',background:'rgba(255,255,255,0.2)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+            <svg style={{width:'40px',height:'40px',color:'white'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+          </div>
+          <div style={{textAlign:'center'}}>
+            <p style={{color:'white',fontSize:'2.5rem',fontWeight:'bold',marginBottom:'12px'}}>{current.title}</p>
+            <p style={{color:'rgba(255,255,255,0.9)',fontSize:'1.5rem',fontWeight:'600'}}>يرجى تأكيد حضورك في القاعة</p>
+            <p style={{color:'rgba(255,255,255,0.7)',fontSize:'1.1rem',marginTop:'8px'}}>
+              سيُلغى الحجز تلقائياً خلال {confirmMinutesLeft} دقيقة
+            </p>
           </div>
           <button
             onClick={handleConfirm}
             disabled={isConfirming}
-            className="bg-white text-orange-600 font-bold px-8 py-4 rounded-2xl text-xl hover:bg-orange-50 active:bg-orange-100 disabled:opacity-60 transition-colors shrink-0 shadow-lg"
+            style={{background:'white',color:'#ea580c',fontWeight:'bold',fontSize:'1.5rem',padding:'20px 60px',borderRadius:'16px',border:'none',cursor:'pointer',opacity:isConfirming?0.6:1}}
           >
             {isConfirming ? '...' : '✓ تأكيد الحضور'}
           </button>
-        </div>
-      )}
-
-      {current && currentEventConfirmed && (
-        <div className="bg-green-600 px-8 py-3 flex items-center gap-3">
-          <svg className="w-6 h-6 text-white shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-          <p className="text-white font-semibold text-lg">تم تأكيد الحضور ✓</p>
+          <p style={{color:'rgba(255,255,255,0.5)',fontSize:'0.9rem'}}>
+            {formatTime(current.startTime)} ← {formatTime(current.endTime)}
+          </p>
         </div>
       )}
 
