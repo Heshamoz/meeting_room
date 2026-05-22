@@ -1,50 +1,83 @@
-import { getStore } from '@netlify/blobs'
+import { createClient } from '@supabase/supabase-js'
 import type { Room } from '@/types'
-
-const STORE_NAME = 'meeting-rooms'
-const ROOMS_KEY = 'rooms'
 
 // In-memory fallback for local dev
 const memStore: Room[] = []
 
-function store() {
-  return getStore({ name: STORE_NAME, consistency: 'strong' })
+function getSupabase() {
+  const url = process.env.SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_KEY
+  if (!url || !key) return null
+  return createClient(url, key)
 }
 
 export async function getAllRooms(): Promise<Room[]> {
+  const supabase = getSupabase()
+  if (!supabase) return [...memStore]
+
   try {
-    const data = await store().get(ROOMS_KEY, { type: 'json' })
-    return Array.isArray(data) ? (data as Room[]) : []
-  } catch {
+    const { data, error } = await supabase
+      .from('rooms')
+      .select('data')
+      .order('created_at', { ascending: true })
+
+    if (error) throw error
+    return (data || []).map((row: { data: Room }) => row.data)
+  } catch (e) {
+    console.error('getAllRooms error:', e)
     return [...memStore]
   }
 }
 
 export async function getRoomById(id: string): Promise<Room | null> {
-  const rooms = await getAllRooms()
-  return rooms.find((r) => r.id === id) ?? null
+  const supabase = getSupabase()
+  if (!supabase) return memStore.find((r) => r.id === id) ?? null
+
+  try {
+    const { data, error } = await supabase
+      .from('rooms')
+      .select('data')
+      .eq('id', id)
+      .single()
+
+    if (error) return null
+    return data?.data as Room ?? null
+  } catch {
+    return null
+  }
 }
 
 export async function saveRoom(room: Room): Promise<void> {
-  try {
-    const rooms = await getAllRooms()
-    const idx = rooms.findIndex((r) => r.id === room.id)
-    if (idx >= 0) rooms[idx] = room
-    else rooms.push(room)
-    await store().setJSON(ROOMS_KEY, rooms)
-  } catch {
+  const supabase = getSupabase()
+  if (!supabase) {
     const idx = memStore.findIndex((r) => r.id === room.id)
     if (idx >= 0) memStore[idx] = room
     else memStore.push(room)
+    return
+  }
+
+  try {
+    await supabase.from('rooms').upsert({
+      id: room.id,
+      data: room,
+      created_at: room.createdAt,
+    })
+  } catch (e) {
+    console.error('saveRoom error:', e)
   }
 }
 
 export async function deleteRoom(id: string): Promise<void> {
-  try {
-    const rooms = await getAllRooms()
-    await store().setJSON(ROOMS_KEY, rooms.filter((r) => r.id !== id))
-  } catch {
+  const supabase = getSupabase()
+  if (!supabase) {
     const idx = memStore.findIndex((r) => r.id === id)
     if (idx >= 0) memStore.splice(idx, 1)
+    return
+  }
+
+  try {
+    await supabase.from('rooms').delete().eq('id', id)
+  } catch (e) {
+    console.error('deleteRoom error:', e)
   }
 }
