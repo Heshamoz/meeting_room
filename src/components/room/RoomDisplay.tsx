@@ -117,6 +117,7 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
   }, [room.id])
 
   useEffect(() => {
+    fetchEvents() // immediate fetch on mount
     const t = setInterval(fetchEvents, REFRESH_INTERVAL)
     return () => clearInterval(t)
   }, [fetchEvents])
