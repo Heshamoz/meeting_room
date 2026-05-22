@@ -210,7 +210,7 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
         </div>
       )}
       {/* Confirmation full-screen modal */}
-      {current && !currentEventConfirmed && confirmMinutesLeft > 0 && (
+      {current && !currentEventConfirmed && (
         <div style={{position:'fixed',inset:0,zIndex:9999,background:'#ea580c',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'32px'}}>
           <div style={{width:'80px',height:'80px',borderRadius:'50%',background:'rgba(255,255,255,0.2)',display:'flex',alignItems:'center',justifyContent:'center'}}>
             <svg style={{width:'40px',height:'40px',color:'white'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -221,7 +221,9 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
             <p style={{color:'white',fontSize:'2.5rem',fontWeight:'bold',marginBottom:'12px'}}>{current.title}</p>
             <p style={{color:'rgba(255,255,255,0.9)',fontSize:'1.5rem',fontWeight:'600'}}>يرجى تأكيد حضورك في القاعة</p>
             <p style={{color:'rgba(255,255,255,0.7)',fontSize:'1.1rem',marginTop:'8px'}}>
-              سيُلغى الحجز تلقائياً خلال {confirmMinutesLeft} دقيقة
+              {confirmMinutesLeft > 0
+                ? `سيُلغى الحجز تلقائياً خلال ${confirmMinutesLeft} دقيقة`
+                : 'يرجى تأكيد الحضور لاستمرار الحجز'}
             </p>
           </div>
           <button
