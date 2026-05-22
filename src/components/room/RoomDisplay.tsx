@@ -28,7 +28,46 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
   const [now, setNow] = useState(new Date())
   const [showBooking, setShowBooking] = useState(false)
   const [lastSync, setLastSync] = useState(new Date())
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const tz = getTimezone()
+
+  // Auto-enter fullscreen on tablet
+  useEffect(() => {
+    const enterFullscreen = async () => {
+      try {
+        if (document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen()
+          setIsFullscreen(true)
+        }
+      } catch { /* user denied fullscreen */ }
+    }
+
+    // Enter fullscreen on first user interaction (required by browsers)
+    const handleFirstTouch = () => {
+      enterFullscreen()
+      document.removeEventListener('click', handleFirstTouch)
+      document.removeEventListener('touchstart', handleFirstTouch)
+    }
+
+    document.addEventListener('click', handleFirstTouch)
+    document.addEventListener('touchstart', handleFirstTouch)
+
+    // Track fullscreen state
+    const onFSChange = () => setIsFullscreen(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', onFSChange)
+
+    // Prevent back navigation
+    history.pushState(null, '', window.location.href)
+    window.onpopstate = () => {
+      history.pushState(null, '', window.location.href)
+    }
+
+    return () => {
+      document.removeEventListener('click', handleFirstTouch)
+      document.removeEventListener('touchstart', handleFirstTouch)
+      document.removeEventListener('fullscreenchange', onFSChange)
+    }
+  }, [])
 
   // Tick every second for the clock
   useEffect(() => {
@@ -229,12 +268,33 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
             )}
           </div>
 
-          {/* Room info */}
+          {/* Room info + fullscreen */}
           <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
             <div className="flex items-center justify-between text-white/40 text-xs">
               <span>{room.capacity} شخص</span>
               <span>{room.amenities.slice(0, 2).join(' · ')}</span>
               <span>مزامنة {format(toZonedTime(lastSync, tz), 'hh:mm')}</span>
+              <button
+                onClick={async () => {
+                  if (!document.fullscreenElement) {
+                    await document.documentElement.requestFullscreen()
+                  } else {
+                    await document.exitFullscreen()
+                  }
+                }}
+                className="text-white/40 hover:text-white/70 transition-colors"
+                title="شاشة كاملة"
+              >
+                {isFullscreen ? (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+                  </svg>
+                )}
+              </button>
             </div>
           </div>
         </div>
