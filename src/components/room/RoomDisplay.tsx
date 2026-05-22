@@ -187,6 +187,37 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
 
   const sc = statusConfig[status]
 
+  // Show confirmation screen instead of room display when unconfirmed
+  if (current && !currentEventConfirmed) {
+    return (
+      <div style={{minHeight:'100vh',background:'#ea580c',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'32px',padding:'40px',textAlign:'center'}}>
+        <div style={{width:'80px',height:'80px',borderRadius:'50%',background:'rgba(255,255,255,0.2)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto'}}>
+          <svg style={{width:'40px',height:'40px'}} fill="none" stroke="white" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+          </svg>
+        </div>
+        <p style={{color:'white',fontSize:'2rem',fontWeight:'bold'}}>{room.name}</p>
+        <p style={{color:'white',fontSize:'2.5rem',fontWeight:'bold'}}>{current.title}</p>
+        <p style={{color:'rgba(255,255,255,0.85)',fontSize:'1.3rem'}}>يرجى تأكيد حضورك في القاعة</p>
+        {confirmMinutesLeft > 0 && (
+          <p style={{color:'rgba(255,255,255,0.7)',fontSize:'1.1rem'}}>
+            سيُلغى الحجز تلقائياً خلال {confirmMinutesLeft} دقيقة
+          </p>
+        )}
+        <button
+          onClick={handleConfirm}
+          disabled={isConfirming}
+          style={{background:'white',color:'#ea580c',fontWeight:'bold',fontSize:'1.6rem',padding:'24px 72px',borderRadius:'20px',border:'none',cursor:'pointer',marginTop:'16px',opacity:isConfirming?0.6:1,boxShadow:'0 8px 32px rgba(0,0,0,0.2)'}}
+        >
+          {isConfirming ? '...' : '✓ تأكيد الحضور'}
+        </button>
+        <p style={{color:'rgba(255,255,255,0.5)',fontSize:'0.95rem',marginTop:'8px'}}>
+          {formatTime(current.startTime)} — {formatTime(current.endTime)}
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className={`min-h-screen bg-gradient-to-br ${sc.gradientFrom} ${sc.gradientVia} to-slate-900 flex flex-col tablet-display select-none`}>
       {/* Kiosk overlay: shown when user exits fullscreen */}
@@ -207,35 +238,6 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
           </div>
           <p className="text-white text-3xl font-bold mb-2">{room.name}</p>
           <p className="text-white/50 text-lg">اضغط للعودة</p>
-        </div>
-      )}
-      {/* Confirmation full-screen modal */}
-      {current && !currentEventConfirmed && (
-        <div style={{position:'fixed',inset:0,zIndex:9999,background:'#ea580c',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'32px'}}>
-          <div style={{width:'80px',height:'80px',borderRadius:'50%',background:'rgba(255,255,255,0.2)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-            <svg style={{width:'40px',height:'40px',color:'white'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-            </svg>
-          </div>
-          <div style={{textAlign:'center'}}>
-            <p style={{color:'white',fontSize:'2.5rem',fontWeight:'bold',marginBottom:'12px'}}>{current.title}</p>
-            <p style={{color:'rgba(255,255,255,0.9)',fontSize:'1.5rem',fontWeight:'600'}}>يرجى تأكيد حضورك في القاعة</p>
-            <p style={{color:'rgba(255,255,255,0.7)',fontSize:'1.1rem',marginTop:'8px'}}>
-              {confirmMinutesLeft > 0
-                ? `سيُلغى الحجز تلقائياً خلال ${confirmMinutesLeft} دقيقة`
-                : 'يرجى تأكيد الحضور لاستمرار الحجز'}
-            </p>
-          </div>
-          <button
-            onClick={handleConfirm}
-            disabled={isConfirming}
-            style={{background:'white',color:'#ea580c',fontWeight:'bold',fontSize:'1.5rem',padding:'20px 60px',borderRadius:'16px',border:'none',cursor:'pointer',opacity:isConfirming?0.6:1}}
-          >
-            {isConfirming ? '...' : '✓ تأكيد الحضور'}
-          </button>
-          <p style={{color:'rgba(255,255,255,0.5)',fontSize:'0.9rem'}}>
-            {formatTime(current.startTime)} ← {formatTime(current.endTime)}
-          </p>
         </div>
       )}
 
