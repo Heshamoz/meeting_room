@@ -30,7 +30,7 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
   const [lastSync, setLastSync] = useState(new Date())
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showReturnOverlay, setShowReturnOverlay] = useState(false)
-  const [currentEventConfirmed, setCurrentEventConfirmed] = useState<boolean>(false)
+  const [confirmedEventId, setConfirmedEventId] = useState<string | null>(null)
   const [isConfirming, setIsConfirming] = useState(false)
   const tz = getTimezone()
 
@@ -107,9 +107,7 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
         const data = await res.json()
         setEvents(data.events || [])
         setLastSync(new Date())
-        if (typeof data.currentEventConfirmed === 'boolean') {
-          setCurrentEventConfirmed(data.currentEventConfirmed)
-        }
+        // confirmation is managed locally per event ID
       }
     } catch {
       // keep existing events
@@ -131,17 +129,21 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
     ? Math.max(0, 30 - Math.floor((now.getTime() - new Date(current.startTime).getTime()) / 60000))
     : 0
 
+  const currentEventConfirmed = !!(current && confirmedEventId === current.id)
+
   const handleConfirm = async () => {
     if (!current || isConfirming) return
     setIsConfirming(true)
     try {
-      const res = await fetch(`/api/rooms/${room.id}/confirm`, {
+      await fetch(`/api/rooms/${room.id}/confirm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ eventId: current.id }),
       })
-      if (res.ok) setCurrentEventConfirmed(true)
-    } catch { /* keep state */ }
+      setConfirmedEventId(current.id)
+    } catch { /* keep local confirmation */
+      setConfirmedEventId(current.id)
+    }
     setIsConfirming(false)
   }
   const colors = getColorClasses(room.color)
