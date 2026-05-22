@@ -22,21 +22,25 @@ export async function GET(_req: Request, { params }: Params) {
     let currentEventConfirmed: boolean | null = null
 
     if (currentEvent) {
-      await registerEvent(currentEvent.id, room.id, currentEvent.startTime)
-      const confirmed = await isEventConfirmed(currentEvent.id)
-      // null means unknown → treat as unconfirmed (false)
-      currentEventConfirmed = confirmed ?? false
+      try {
+        await registerEvent(currentEvent.id, room.id, currentEvent.startTime)
+        const confirmed = await isEventConfirmed(currentEvent.id)
+        currentEventConfirmed = confirmed ?? false
+      } catch {
+        currentEventConfirmed = false // Supabase error → show banner anyway
+      }
     }
 
-    // Cleanup: auto-delete unconfirmed meetings past 30 minutes
-    const expired = await getExpiredUnconfirmed()
-    for (const item of expired) {
-      try {
-        const expiredRoom = await getRoomById(item.room_id)
-        if (expiredRoom) await cancelEvent(expiredRoom.calendarId, item.event_id)
-      } catch { /* ignore calendar errors */ }
-      await deleteConfirmation(item.event_id)
-    }
+    // Cleanup: auto-delete unconfirmed meetings past 30 minutes (non-blocking)
+    getExpiredUnconfirmed().then(async (expired) => {
+      for (const item of expired) {
+        try {
+          const expiredRoom = await getRoomById(item.room_id)
+          if (expiredRoom) await cancelEvent(expiredRoom.calendarId, item.event_id)
+        } catch { /* ignore */ }
+        await deleteConfirmation(item.event_id)
+      }
+    }).catch(() => { /* ignore cleanup errors */ })
 
     return NextResponse.json({ events, currentEventConfirmed })
   } catch (err) {

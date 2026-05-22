@@ -32,6 +32,7 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
   const [showReturnOverlay, setShowReturnOverlay] = useState(false)
   const [currentEventConfirmed, setCurrentEventConfirmed] = useState<boolean | null>(null)
   const [isConfirming, setIsConfirming] = useState(false)
+  const [eventsLoaded, setEventsLoaded] = useState(false)
   const tz = getTimezone()
 
   // Kiosk mode: fullscreen + prevent exit
@@ -107,9 +108,8 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
         const data = await res.json()
         setEvents(data.events || [])
         setLastSync(new Date())
-        if (data.currentEventConfirmed !== undefined) {
-          setCurrentEventConfirmed(data.currentEventConfirmed)
-        }
+        setCurrentEventConfirmed(data.currentEventConfirmed ?? false)
+        setEventsLoaded(true)
       }
     } catch {
       // keep existing events
@@ -284,7 +284,7 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
               )}
 
               {/* Confirmation banner */}
-              {currentEventConfirmed === false && confirmMinutesLeft > 0 && (
+              {eventsLoaded && currentEventConfirmed !== true && confirmMinutesLeft > 0 && (
                 <div className="mt-6 bg-orange-500/20 border border-orange-400/40 rounded-2xl p-5">
                   <div className="flex items-center justify-between gap-4">
                     <div>
