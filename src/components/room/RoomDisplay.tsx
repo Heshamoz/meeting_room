@@ -124,26 +124,35 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
   const current = getCurrentEvent(events)
   const upcoming = getUpcomingEvents(events)
 
-  // Minutes remaining before auto-cancel (30 min from event start)
-  const confirmMinutesLeft = current
-    ? Math.max(0, 30 - Math.floor((now.getTime() - new Date(current.startTime).getTime()) / 60000))
+  // --- Confirmation logic (uses raw UTC timestamps to avoid timezone issues) ---
+  const nowMs = now.getTime()
+
+  // Find active event using simple raw timestamp comparison
+  const activeEvent = events.find(e => {
+    if (e.status === 'cancelled') return false
+    const startMs = new Date(e.startTime).getTime()
+    const endMs   = new Date(e.endTime).getTime()
+    return startMs <= nowMs && nowMs <= endMs
+  }) || null
+
+  const confirmMinutesLeft = activeEvent
+    ? Math.max(0, 30 - Math.floor((nowMs - new Date(activeEvent.startTime).getTime()) / 60000))
     : 0
 
-  const currentEventConfirmed = !!(current && confirmedEventId === current.id)
+  const isConfirmed = !!(activeEvent && confirmedEventId === activeEvent.id)
 
   const handleConfirm = async () => {
-    if (!current || isConfirming) return
+    if (!activeEvent || isConfirming) return
     setIsConfirming(true)
+    // Confirm locally immediately (so UI updates even if API fails)
+    setConfirmedEventId(activeEvent.id)
     try {
       await fetch(`/api/rooms/${room.id}/confirm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventId: current.id }),
+        body: JSON.stringify({ eventId: activeEvent.id }),
       })
-      setConfirmedEventId(current.id)
-    } catch { /* keep local confirmation */
-      setConfirmedEventId(current.id)
-    }
+    } catch { /* local confirmation already set above */ }
     setIsConfirming(false)
   }
   const colors = getColorClasses(room.color)
@@ -225,27 +234,52 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
         </div>
       </div>
 
-      {/* Confirmation button - always visible when meeting active and not confirmed */}
-      {current && !currentEventConfirmed && (
-        <div style={{background:'#f97316',padding:'16px 32px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:'16px'}}>
+      {/* ── Confirmation banner: fixed at bottom, above everything ── */}
+      {activeEvent && !isConfirmed && (
+        <div style={{
+          position:'fixed', bottom:0, left:0, right:0, zIndex:9999,
+          background:'#ea580c',
+          padding:'20px 32px',
+          display:'flex', alignItems:'center', justifyContent:'space-between', gap:'16px',
+          boxShadow:'0 -4px 24px rgba(0,0,0,0.4)'
+        }}>
           <div>
-            <p style={{color:'white',fontWeight:'bold',fontSize:'1.2rem',margin:0}}>يرجى تأكيد حضورك في القاعة</p>
-            <p style={{color:'rgba(255,255,255,0.8)',fontSize:'0.9rem',margin:0}}>
-              {confirmMinutesLeft > 0 ? `سيُلغى الحجز خلال ${confirmMinutesLeft} دقيقة` : 'اضغط لتأكيد الحضور'}
+            <p style={{color:'#fff',fontWeight:'bold',fontSize:'1.35rem',margin:0}}>
+              يرجى تأكيد حضورك في القاعة
+            </p>
+            <p style={{color:'rgba(255,255,255,0.85)',fontSize:'0.95rem',margin:'4px 0 0'}}>
+              {`"${activeEvent.title}" · سيُلغى الحجز خلال ${confirmMinutesLeft} دقيقة`}
             </p>
           </div>
           <button
             onClick={handleConfirm}
             disabled={isConfirming}
-            style={{background:'white',color:'#f97316',fontWeight:'bold',fontSize:'1.1rem',padding:'12px 32px',borderRadius:'12px',border:'none',cursor:'pointer',whiteSpace:'nowrap',opacity:isConfirming?0.6:1}}
+            style={{
+              background:'#fff', color:'#ea580c',
+              fontWeight:'bold', fontSize:'1.2rem',
+              padding:'14px 40px', borderRadius:'14px',
+              border:'none', cursor:'pointer',
+              whiteSpace:'nowrap',
+              boxShadow:'0 2px 8px rgba(0,0,0,0.25)',
+              opacity: isConfirming ? 0.6 : 1,
+              flexShrink: 0
+            }}
           >
-            {isConfirming ? '...' : '✓ تأكيد الحضور'}
+            {isConfirming ? 'جاري التأكيد...' : '✓ تأكيد الحضور'}
           </button>
         </div>
       )}
-      {current && currentEventConfirmed && (
-        <div style={{background:'#16a34a',padding:'12px 32px',display:'flex',alignItems:'center',gap:'12px'}}>
-          <span style={{color:'white',fontSize:'1.1rem',fontWeight:'600'}}>✓ تم تأكيد الحضور</span>
+
+      {activeEvent && isConfirmed && (
+        <div style={{
+          position:'fixed', bottom:0, left:0, right:0, zIndex:9999,
+          background:'#16a34a',
+          padding:'16px 32px',
+          display:'flex', alignItems:'center', gap:'12px',
+          boxShadow:'0 -4px 24px rgba(0,0,0,0.3)'
+        }}>
+          <span style={{color:'#fff',fontSize:'1.2rem',fontWeight:'700'}}>✓ تم تأكيد الحضور</span>
+          <span style={{color:'rgba(255,255,255,0.7)',fontSize:'0.95rem'}}>{activeEvent.title}</span>
         </div>
       )}
 
