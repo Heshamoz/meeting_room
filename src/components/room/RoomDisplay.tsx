@@ -193,16 +193,6 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
   return (
     <div className={`min-h-screen bg-gradient-to-br ${sc.gradientFrom} ${sc.gradientVia} to-slate-900 flex flex-col tablet-display select-none`}>
 
-      {/* ══ DEBUG BAR – remove after fix confirmed ══ */}
-      <div style={{position:'fixed',top:0,left:0,right:0,zIndex:99999,background:'#000',color:'#0f0',padding:'6px 12px',fontSize:'13px',fontFamily:'monospace',display:'flex',gap:'16px'}}>
-        <span>events:{events.length}</span>
-        <span>current:{current ? current.title.slice(0,20) : 'NULL'}</span>
-        <span>active:{activeEvent ? 'YES' : 'NO'}</span>
-        <span>confirmed:{isConfirmed ? 'YES' : 'no'}</span>
-        <span>status:{status}</span>
-      </div>
-      {/* ══ END DEBUG BAR ══ */}
-
       {/* Kiosk overlay: shown when user exits fullscreen */}
       {showReturnOverlay && (
         <div
@@ -236,52 +226,45 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
         </div>
       </div>
 
-      {/* ── Confirmation banner: fixed at bottom, above everything ── */}
+      {/* ── Confirmation button: floating bottom-left ── */}
       {activeEvent && !isConfirmed && (
-        <div style={{
-          position:'fixed', bottom:0, left:0, right:0, zIndex:9999,
-          background:'#ea580c',
-          padding:'20px 32px',
-          display:'flex', alignItems:'center', justifyContent:'space-between', gap:'16px',
-          boxShadow:'0 -4px 24px rgba(0,0,0,0.4)'
-        }}>
-          <div>
-            <p style={{color:'#fff',fontWeight:'bold',fontSize:'1.35rem',margin:0}}>
-              يرجى تأكيد حضورك في القاعة
-            </p>
-            <p style={{color:'rgba(255,255,255,0.85)',fontSize:'0.95rem',margin:'4px 0 0'}}>
-              {`"${activeEvent.title}" · سيُلغى الحجز خلال ${confirmMinutesLeft} دقيقة`}
-            </p>
-          </div>
-          <button
-            onClick={handleConfirm}
-            disabled={isConfirming}
-            style={{
-              background:'#fff', color:'#ea580c',
-              fontWeight:'bold', fontSize:'1.2rem',
-              padding:'14px 40px', borderRadius:'14px',
-              border:'none', cursor:'pointer',
-              whiteSpace:'nowrap',
-              boxShadow:'0 2px 8px rgba(0,0,0,0.25)',
-              opacity: isConfirming ? 0.6 : 1,
-              flexShrink: 0
-            }}
-          >
-            {isConfirming ? 'جاري التأكيد...' : '✓ تأكيد الحضور'}
-          </button>
-        </div>
+        <button
+          onClick={handleConfirm}
+          disabled={isConfirming}
+          style={{
+            position:'fixed', bottom:'32px', left:'32px', zIndex:9999,
+            background:'#ea580c',
+            color:'#fff',
+            fontWeight:'bold',
+            fontSize:'1.2rem',
+            padding:'18px 40px',
+            borderRadius:'16px',
+            border:'none',
+            cursor:'pointer',
+            boxShadow:'0 4px 20px rgba(0,0,0,0.4)',
+            opacity: isConfirming ? 0.7 : 1,
+            display:'flex', alignItems:'center', gap:'10px',
+          }}
+        >
+          <span style={{fontSize:'1.4rem'}}>✓</span>
+          {isConfirming ? 'جاري التأكيد...' : 'تأكيد الحضور'}
+        </button>
       )}
 
       {activeEvent && isConfirmed && (
         <div style={{
-          position:'fixed', bottom:0, left:0, right:0, zIndex:9999,
+          position:'fixed', bottom:'32px', left:'32px', zIndex:9999,
           background:'#16a34a',
-          padding:'16px 32px',
-          display:'flex', alignItems:'center', gap:'12px',
-          boxShadow:'0 -4px 24px rgba(0,0,0,0.3)'
+          color:'#fff',
+          fontWeight:'bold',
+          fontSize:'1.1rem',
+          padding:'18px 40px',
+          borderRadius:'16px',
+          boxShadow:'0 4px 20px rgba(0,0,0,0.4)',
+          display:'flex', alignItems:'center', gap:'10px',
         }}>
-          <span style={{color:'#fff',fontSize:'1.2rem',fontWeight:'700'}}>✓ تم تأكيد الحضور</span>
-          <span style={{color:'rgba(255,255,255,0.7)',fontSize:'0.95rem'}}>{activeEvent.title}</span>
+          <span style={{fontSize:'1.4rem'}}>✓</span>
+          تم تأكيد الحضور
         </div>
       )}
 
