@@ -368,7 +368,9 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
           <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
             <div className="flex items-center justify-between text-white/40 text-xs">
               <span>{room.capacity} شخص</span>
-              <span>{room.amenities.slice(0, 2).join(' · ')}</span>
+              <span style={{color: current ? '#f97316' : '#4ade80', fontWeight: 'bold'}}>
+                {current ? `● اجتماع نشط: ${events.length} أحداث` : `○ لا يوجد اجتماع (${events.length} أحداث)`}
+              </span>
               <span>مزامنة {format(toZonedTime(lastSync, tz), 'hh:mm')}</span>
               {!isFullscreen && (
                 <button
