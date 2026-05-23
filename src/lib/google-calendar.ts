@@ -24,7 +24,7 @@ function getCalendar(impersonateEmail?: string) {
 
 export async function getRoomEvents(
   calendarId: string,
-  daysAhead = 1
+  daysAhead = 0
 ): Promise<CalendarEvent[]> {
   const calendar = getCalendar()
 
