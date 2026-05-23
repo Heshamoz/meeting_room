@@ -226,47 +226,6 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
         </div>
       </div>
 
-      {/* ── Confirmation button: floating bottom-left ── */}
-      {activeEvent && !isConfirmed && (
-        <button
-          onClick={handleConfirm}
-          disabled={isConfirming}
-          style={{
-            position:'fixed', bottom:'32px', left:'32px', zIndex:9999,
-            background:'#ea580c',
-            color:'#fff',
-            fontWeight:'bold',
-            fontSize:'1.2rem',
-            padding:'18px 40px',
-            borderRadius:'16px',
-            border:'none',
-            cursor:'pointer',
-            boxShadow:'0 4px 20px rgba(0,0,0,0.4)',
-            opacity: isConfirming ? 0.7 : 1,
-            display:'flex', alignItems:'center', gap:'10px',
-          }}
-        >
-          <span style={{fontSize:'1.4rem'}}>✓</span>
-          {isConfirming ? 'جاري التأكيد...' : 'تأكيد الحضور'}
-        </button>
-      )}
-
-      {activeEvent && isConfirmed && (
-        <div style={{
-          position:'fixed', bottom:'32px', left:'32px', zIndex:9999,
-          background:'#16a34a',
-          color:'#fff',
-          fontWeight:'bold',
-          fontSize:'1.1rem',
-          padding:'18px 40px',
-          borderRadius:'16px',
-          boxShadow:'0 4px 20px rgba(0,0,0,0.4)',
-          display:'flex', alignItems:'center', gap:'10px',
-        }}>
-          <span style={{fontSize:'1.4rem'}}>✓</span>
-          تم تأكيد الحضور
-        </div>
-      )}
 
       {/* Main content */}
       <div className="flex-1 grid grid-cols-5 gap-6 px-8 pb-8">
@@ -329,6 +288,34 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
                   )}
                 </div>
               )}
+
+              {/* Confirmation button inside the meeting card */}
+              <div className="mt-6">
+                {!isConfirmed ? (
+                  <button
+                    onClick={handleConfirm}
+                    disabled={isConfirming}
+                    className="w-full py-4 rounded-2xl font-bold text-lg transition-all active:scale-95"
+                    style={{
+                      background: '#ea580c',
+                      color: '#fff',
+                      border: 'none',
+                      cursor: 'pointer',
+                      opacity: isConfirming ? 0.7 : 1,
+                      fontSize: '1.15rem',
+                    }}
+                  >
+                    {isConfirming ? 'جاري التأكيد...' : '✓  تأكيد الحضور'}
+                  </button>
+                ) : (
+                  <div
+                    className="w-full py-4 rounded-2xl font-bold text-lg text-center"
+                    style={{ background: '#16a34a', color: '#fff', fontSize: '1.15rem' }}
+                  >
+                    ✓  تم تأكيد الحضور
+                  </div>
+                )}
+              </div>
 
             </div>
           ) : (
