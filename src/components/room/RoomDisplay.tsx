@@ -124,19 +124,11 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
   const current = getCurrentEvent(events)
   const upcoming = getUpcomingEvents(events)
 
-  // --- Confirmation logic (uses raw UTC timestamps to avoid timezone issues) ---
-  const nowMs = now.getTime()
-
-  // Find active event using simple raw timestamp comparison
-  const activeEvent = events.find(e => {
-    if (e.status === 'cancelled') return false
-    const startMs = new Date(e.startTime).getTime()
-    const endMs   = new Date(e.endTime).getTime()
-    return startMs <= nowMs && nowMs <= endMs
-  }) || null
+  // Confirmation: reuse `current` directly (same detection that drives the status badge)
+  const activeEvent = current
 
   const confirmMinutesLeft = activeEvent
-    ? Math.max(0, 30 - Math.floor((nowMs - new Date(activeEvent.startTime).getTime()) / 60000))
+    ? Math.max(0, 30 - Math.floor((now.getTime() - new Date(activeEvent.startTime).getTime()) / 60000))
     : 0
 
   const isConfirmed = !!(activeEvent && confirmedEventId === activeEvent.id)
@@ -144,15 +136,14 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
   const handleConfirm = async () => {
     if (!activeEvent || isConfirming) return
     setIsConfirming(true)
-    // Confirm locally immediately (so UI updates even if API fails)
-    setConfirmedEventId(activeEvent.id)
+    setConfirmedEventId(activeEvent.id) // update UI immediately
     try {
       await fetch(`/api/rooms/${room.id}/confirm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ eventId: activeEvent.id }),
       })
-    } catch { /* local confirmation already set above */ }
+    } catch { /* local confirmation already set */ }
     setIsConfirming(false)
   }
   const colors = getColorClasses(room.color)
@@ -201,6 +192,17 @@ export default function RoomDisplay({ room, initialEvents }: Props) {
 
   return (
     <div className={`min-h-screen bg-gradient-to-br ${sc.gradientFrom} ${sc.gradientVia} to-slate-900 flex flex-col tablet-display select-none`}>
+
+      {/* ══ DEBUG BAR – remove after fix confirmed ══ */}
+      <div style={{position:'fixed',top:0,left:0,right:0,zIndex:99999,background:'#000',color:'#0f0',padding:'6px 12px',fontSize:'13px',fontFamily:'monospace',display:'flex',gap:'16px'}}>
+        <span>events:{events.length}</span>
+        <span>current:{current ? current.title.slice(0,20) : 'NULL'}</span>
+        <span>active:{activeEvent ? 'YES' : 'NO'}</span>
+        <span>confirmed:{isConfirmed ? 'YES' : 'no'}</span>
+        <span>status:{status}</span>
+      </div>
+      {/* ══ END DEBUG BAR ══ */}
+
       {/* Kiosk overlay: shown when user exits fullscreen */}
       {showReturnOverlay && (
         <div
