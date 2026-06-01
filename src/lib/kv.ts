@@ -16,16 +16,22 @@ export async function getAllRooms(): Promise<Room[]> {
   if (!supabase) return [...memStore]
 
   try {
+    // Select all rows without ordering to avoid created_at column issues
     const { data, error } = await supabase
       .from('rooms')
-      .select('data')
-      .order('created_at', { ascending: true })
+      .select('*')
 
     if (error) throw error
-    return (data || []).map((row: { data: Room }) => row.data)
+    if (!data || data.length === 0) return []
+
+    // Support both: row.data (JSON column) and flat row structure
+    return data.map((row) => {
+      if (row.data && typeof row.data === 'object') return row.data as Room
+      return row as unknown as Room
+    })
   } catch (e) {
     console.error('getAllRooms error:', e)
-    return [...memStore]
+    return []
   }
 }
 
