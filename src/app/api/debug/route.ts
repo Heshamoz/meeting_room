@@ -16,14 +16,24 @@ export async function GET() {
 
   try {
     const supabase = createClient(url, key)
-    const { data, error } = await supabase.from('rooms').select('*')
-    if (error) {
-      return NextResponse.json({ status: 'error', message: error.message, code: error.code })
+
+    // Test 1: same query as getRoomById (known to work)
+    const { data: singleData, error: singleError } = await supabase
+      .from('rooms').select('id, data').limit(10)
+
+    if (singleError) {
+      return NextResponse.json({
+        status: 'db_error',
+        message: singleError.message,
+        code: singleError.code,
+        hint: singleError.hint,
+      })
     }
+
     return NextResponse.json({
       status: 'ok',
-      rooms_count: data?.length ?? 0,
-      room_ids: data?.map((r) => r.id) ?? [],
+      rooms_count: singleData?.length ?? 0,
+      room_ids: singleData?.map((r: {id: string}) => r.id) ?? [],
     })
   } catch (e) {
     return NextResponse.json({ status: 'exception', message: String(e) })
