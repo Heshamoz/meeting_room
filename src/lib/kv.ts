@@ -1,42 +1,58 @@
-import { createClient } from '@supabase/supabase-js'
 import type { Room } from '@/types'
 
-function getSupabase() {
-  const url = process.env.SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_KEY
-  if (!url || !key) return null
-  return createClient(url, key, {
-    auth: { persistSession: false },
-    global: { fetch: fetch.bind(globalThis) },
+function sbFetch(path: string, options: RequestInit = {}) {
+  const url = (process.env.SUPABASE_URL ?? '').trim()
+  const key = (process.env.SUPABASE_SERVICE_KEY ?? '').trim()
+  return fetch(`${url}/rest/v1${path}`, {
+    ...options,
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
+      ...(options.headers as Record<string, string> ?? {}),
+    },
   })
 }
 
 export async function getAllRooms(): Promise<Room[]> {
-  const sb = getSupabase()
-  if (!sb) return []
-  const { data, error } = await sb.from('rooms').select('id, data')
-  if (error) { console.error('getAllRooms:', error.message); return [] }
-  return (data || []).map((r: { data: Room }) => r.data)
+  try {
+    const res = await sbFetch('/rooms?select=id,data')
+    if (!res.ok) return []
+    const rows = await res.json() as Array<{ data: Room }>
+    return rows.map(r => r.data)
+  } catch {
+    return []
+  }
 }
 
 export async function getRoomById(id: string): Promise<Room | null> {
-  const sb = getSupabase()
-  if (!sb) return null
-  const { data, error } = await sb.from('rooms').select('data').eq('id', id).single()
-  if (error) return null
-  return (data as { data: Room })?.data ?? null
+  try {
+    const res = await sbFetch(`/rooms?select=data&id=eq.${encodeURIComponent(id)}`)
+    if (!res.ok) return null
+    const rows = await res.json() as Array<{ data: Room }>
+    return rows[0]?.data ?? null
+  } catch {
+    return null
+  }
 }
 
 export async function saveRoom(room: Room): Promise<void> {
-  const sb = getSupabase()
-  if (!sb) return
-  const { error } = await sb.from('rooms').upsert({ id: room.id, data: room }, { onConflict: 'id' })
-  if (error) console.error('saveRoom:', error.message)
+  try {
+    await sbFetch('/rooms', {
+      method: 'POST',
+      headers: { Prefer: 'resolution=merge-duplicates' } as Record<string, string>,
+      body: JSON.stringify({ id: room.id, data: room }),
+    })
+  } catch (e) {
+    console.error('saveRoom:', e)
+  }
 }
 
 export async function deleteRoom(id: string): Promise<void> {
-  const sb = getSupabase()
-  if (!sb) return
-  const { error } = await sb.from('rooms').delete().eq('id', id)
-  if (error) console.error('deleteRoom:', error.message)
+  try {
+    await sbFetch(`/rooms?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' })
+  } catch (e) {
+    console.error('deleteRoom:', e)
+  }
 }
