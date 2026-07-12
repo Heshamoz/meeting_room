@@ -1,94 +1,50 @@
-// Direct Supabase REST API calls (no SDK) — consistent with kv.ts
+import { createClient } from '@supabase/supabase-js'
 
-function getConfig() {
+function getSupabase() {
   const url = process.env.SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_KEY
   if (!url || !key) return null
-  return { url, key }
+  return createClient(url, key, {
+    auth: { persistSession: false },
+    global: { fetch: fetch.bind(globalThis) },
+  })
 }
 
-function h(key: string) {
-  return {
-    'Content-Type': 'application/json',
-    apikey: key,
-    Authorization: `Bearer ${key}`,
-    Prefer: 'return=representation',
-  }
-}
-
-const TABLE = 'booking_confirmations'
+const T = 'booking_confirmations'
 
 export async function registerEvent(eventId: string, roomId: string, startTime: string): Promise<void> {
-  const cfg = getConfig()
-  if (!cfg) return
-  try {
-    await fetch(`${cfg.url}/rest/v1/${TABLE}`, {
-      method: 'POST',
-      headers: { ...h(cfg.key), Prefer: 'resolution=ignore-duplicates,return=representation' },
-      body: JSON.stringify({ event_id: eventId, room_id: roomId, start_time: startTime, confirmed: false }),
-      cache: 'no-store',
-    })
-  } catch { /* ignore */ }
+  const sb = getSupabase()
+  if (!sb) return
+  await sb.from(T).upsert(
+    { event_id: eventId, room_id: roomId, start_time: startTime, confirmed: false },
+    { onConflict: 'event_id', ignoreDuplicates: true }
+  )
 }
 
 export async function confirmEvent(eventId: string): Promise<boolean> {
-  const cfg = getConfig()
-  if (!cfg) return false
-  try {
-    const res = await fetch(
-      `${cfg.url}/rest/v1/${TABLE}?event_id=eq.${encodeURIComponent(eventId)}`,
-      {
-        method: 'PATCH',
-        headers: h(cfg.key),
-        body: JSON.stringify({ confirmed: true }),
-        cache: 'no-store',
-      }
-    )
-    return res.ok
-  } catch {
-    return false
-  }
+  const sb = getSupabase()
+  if (!sb) return false
+  const { error } = await sb.from(T).update({ confirmed: true }).eq('event_id', eventId)
+  return !error
 }
 
 export async function isEventConfirmed(eventId: string): Promise<boolean | null> {
-  const cfg = getConfig()
-  if (!cfg) return null
-  try {
-    const res = await fetch(
-      `${cfg.url}/rest/v1/${TABLE}?event_id=eq.${encodeURIComponent(eventId)}&select=confirmed`,
-      { headers: h(cfg.key), cache: 'no-store' }
-    )
-    if (!res.ok) return null
-    const rows: { confirmed: boolean }[] = await res.json()
-    return rows[0]?.confirmed ?? null
-  } catch {
-    return null
-  }
+  const sb = getSupabase()
+  if (!sb) return null
+  const { data } = await sb.from(T).select('confirmed').eq('event_id', eventId).single()
+  return (data as { confirmed: boolean } | null)?.confirmed ?? null
 }
 
 export async function getExpiredUnconfirmed(): Promise<Array<{ event_id: string; room_id: string }>> {
-  const cfg = getConfig()
-  if (!cfg) return []
-  try {
-    const cutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString()
-    const res = await fetch(
-      `${cfg.url}/rest/v1/${TABLE}?confirmed=eq.false&start_time=lt.${encodeURIComponent(cutoff)}&select=event_id,room_id`,
-      { headers: h(cfg.key), cache: 'no-store' }
-    )
-    if (!res.ok) return []
-    return await res.json()
-  } catch {
-    return []
-  }
+  const sb = getSupabase()
+  if (!sb) return []
+  const cutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString()
+  const { data } = await sb.from(T).select('event_id, room_id').eq('confirmed', false).lt('start_time', cutoff)
+  return data || []
 }
 
 export async function deleteConfirmation(eventId: string): Promise<void> {
-  const cfg = getConfig()
-  if (!cfg) return
-  try {
-    await fetch(
-      `${cfg.url}/rest/v1/${TABLE}?event_id=eq.${encodeURIComponent(eventId)}`,
-      { method: 'DELETE', headers: h(cfg.key), cache: 'no-store' }
-    )
-  } catch { /* ignore */ }
+  const sb = getSupabase()
+  if (!sb) return
+  await sb.from(T).delete().eq('event_id', eventId)
 }
